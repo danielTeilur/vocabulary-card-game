@@ -1,0 +1,177 @@
+[
+  {
+    "word": "incident",
+    "translation": "incidente",
+    "level": 1,
+    "definition": "A situation where something goes wrong or is not secure.",
+    "definition_translation": "Una situación donde algo sale mal o no es seguro."
+  },
+  {
+    "word": "breach",
+    "translation": "brecha",
+    "level": 1,
+    "definition": "An event where unauthorized people access data.",
+    "definition_translation": "Un evento donde personas no autorizadas acceden a datos."
+  },
+  {
+    "word": "investigate",
+    "translation": "investigar",
+    "level": 1,
+    "definition": "To look carefully into a problem to find the cause.",
+    "definition_translation": "Mirar cuidadosamente un problema para encontrar la causa."
+  },
+  {
+    "word": "analyze",
+    "translation": "analizar",
+    "level": 1,
+    "definition": "To study data or a situation to understand it.",
+    "definition_translation": "Estudiar datos o una situación para entenderla."
+  },
+  {
+    "word": "respond",
+    "translation": "responder",
+    "level": 1,
+    "definition": "To take action after something happens.",
+    "definition_translation": "Tomar acción después de que algo sucede."
+  },
+  {
+    "word": "detect",
+    "translation": "detectar",
+    "level": 1,
+    "definition": "To discover or notice a problem or threat.",
+    "definition_translation": "Descubrir o notar un problema o amenaza."
+  },
+  {
+    "word": "monitor",
+    "translation": "monitorear",
+    "level": 1,
+    "definition": "To watch systems regularly to check for issues.",
+    "definition_translation": "Observar sistemas regularmente para detectar problemas."
+  },
+  {
+    "word": "alert",
+    "translation": "alerta",
+    "level": 1,
+    "definition": "A warning that something may be wrong.",
+    "definition_translation": "Una advertencia de que algo puede estar mal."
+  },
+  {
+    "word": "threat",
+    "translation": "amenaza",
+    "level": 1,
+    "definition": "Something that can cause harm to a system.",
+    "definition_translation": "Algo que puede causar daño a un sistema."
+  },
+  {
+    "word": "vulnerability",
+    "translation": "vulnerabilidad",
+    "level": 1,
+    "definition": "A weakness that can be exploited by attackers.",
+    "definition_translation": "Una debilidad que puede ser explotada por atacantes."
+  },
+  {
+    "word": "firewall",
+    "translation": "firewall",
+    "level": 1,
+    "definition": "A system that blocks unauthorized access.",
+    "definition_translation": "Un sistema que bloquea accesos no autorizados."
+  },
+  {
+    "word": "malware",
+    "translation": "malware",
+    "level": 1,
+    "definition": "Software designed to damage or access systems.",
+    "definition_translation": "Software diseñado para dañar o acceder a sistemas."
+  },
+  {
+    "word": "phishing",
+    "translation": "phishing",
+    "level": 1,
+    "definition": "A method to trick users into giving sensitive information.",
+    "definition_translation": "Un método para engañar a usuarios y obtener información sensible."
+  },
+  {
+    "word": "log",
+    "translation": "registro",
+    "level": 1,
+    "definition": "A record of events in a system.",
+    "definition_translation": "Un registro de eventos en un sistema."
+  },
+  {
+    "word": "remediation",
+    "translation": "remediación",
+    "level": 2,
+    "definition": "The process of fixing a security issue.",
+    "definition_translation": "El proceso de corregir un problema de seguridad."
+  },
+  {
+    "word": "containment",
+    "translation": "contención",
+    "level": 2,
+    "definition": "Actions taken to limit the damage of an incident.",
+    "definition_translation": "Acciones tomadas para limitar el daño de un incidente."
+  },
+  {
+    "word": "forensics",
+    "translation": "forense",
+    "level": 2,
+    "definition": "The analysis of evidence after a security event.",
+    "definition_translation": "El análisis de evidencia después de un evento de seguridad."
+  },
+  {
+    "word": "exploit",
+    "translation": "exploit",
+    "level": 2,
+    "definition": "A technique used to take advantage of a vulnerability.",
+    "definition_translation": "Una técnica usada para aprovechar una vulnerabilidad."
+  },
+  {
+    "word": "patch",
+    "translation": "parche",
+    "level": 1,
+    "definition": "A software update that fixes a problem.",
+    "definition_translation": "Una actualización de software que corrige un problema."
+  },
+  {
+    "word": "access",
+    "translation": "acceso",
+    "level": 1,
+    "definition": "The ability to enter or use a system.",
+    "definition_translation": "La capacidad de entrar o usar un sistema."
+  },
+  {
+    "word": "unauthorized",
+    "translation": "no autorizado",
+    "level": 2,
+    "definition": "Without permission to access or act.",
+    "definition_translation": "Sin permiso para acceder o actuar."
+  },
+  {
+    "word": "compromise",
+    "translation": "comprometer",
+    "level": 2,
+    "definition": "To break the security of a system or account.",
+    "definition_translation": "Romper la seguridad de un sistema o cuenta."
+  },
+  {
+    "word": "escalation",
+    "translation": "escalamiento",
+    "level": 3,
+    "definition": "When an issue becomes more serious or gains more access.",
+    "definition_translation": "Cuando un problema se vuelve más serio o gana más acceso."
+  },
+  {
+    "word": "root cause",
+    "translation": "causa raíz",
+    "level": 2,
+    "definition": "The main reason why a problem happened.",
+    "definition_translation": "La razón principal por la que ocurrió un problema."
+  },
+  {
+    "word": "mitigation",
+    "translation": "mitigación",
+    "level": 2,
+    "definition": "Actions taken to reduce risk or damage.",
+    "definition_translation": "Acciones tomadas para reducir el riesgo o el daño."
+  }
+]
