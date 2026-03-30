@@ -1,5 +1,4 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
-import wordBank from "../../../../backend/data/wordbanks/word_bank.json";
 import {
   bootstrapWordAudio,
   evaluatePronunciation,
@@ -109,7 +108,7 @@ const shuffle = (cards) => {
   return copy;
 };
 
-const buildDeck = () => {
+const buildDeck = (wordBank) => {
   deckInstance += 1;
   return shuffle(
     wordBank.map((entry, idx) => ({
@@ -157,8 +156,8 @@ const boardClass = (card) => {
   return "";
 };
 
-function GameBoardMock() {
-  const firstDeck = buildDeck();
+function GameBoardMock({ wordBank }) {
+  const firstDeck = buildDeck(wordBank);
   const [handCards, setHandCards] = useState(firstDeck.slice(0, HAND_SIZE));
   const [deckCards, setDeckCards] = useState(firstDeck.slice(HAND_SIZE));
   const [boardRows, setBoardRows] = useState({ 1: [], 2: [], 3: [] });
@@ -197,7 +196,7 @@ function GameBoardMock() {
   const handTrackRef = useRef(null);
   const [handScrollHint, setHandScrollHint] = useState("none");
 
-  const deckTotal = wordBank.length;
+  const deckTotal = wordBank ? wordBank.length : 0;
   const targetScore = requiredScore(stageNumber);
   const flatBoardCards = useMemo(() => boardCards(boardRows), [boardRows]);
   const selectedBoardCards = useMemo(() => flatBoardCards.filter((card) => selectedBoardIds.includes(card.id)), [flatBoardCards, selectedBoardIds]);
@@ -250,7 +249,7 @@ function GameBoardMock() {
   const interactionLocked = Boolean(resultState || enhanceOverlay);
 
   useEffect(() => {
-    const words = [...new Set(wordBank.map((entry) => entry.word))];
+    const words = [...new Set((wordBank || []).map((entry) => entry.word))];
     bootstrapWordAudio(words).then((map) => setWordAudioMap(map || {}));
   }, []);
 
