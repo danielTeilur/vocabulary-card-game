@@ -534,18 +534,24 @@ function GameBoardMock({ wordBank }) {
     }
 
     setSentenceData({ text: "", audioUrl: "", loading: true, error: "" });
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("timeout")), 15000)
+    );
     try {
-      const text = await generateSentence(words);
+      const text = await Promise.race([generateSentence(words), timeout]);
       let audioUrl = "";
       try {
         audioUrl = (await generateSentenceAudio(text)) || "";
       } catch {
-        // audio failed but we still have the sentence text
+        // audio failed but the sentence text is still usable
       }
       sentenceCacheRef.current[cacheKey] = { text, audioUrl };
       setSentenceData({ text, audioUrl, loading: false, error: "" });
-    } catch {
-      setSentenceData({ text: "", audioUrl: "", loading: false, error: "Could not generate sentence. Please try again." });
+    } catch (err) {
+      const msg = err?.message === "timeout"
+        ? "La generación tardó demasiado. Presiona Go Back e inténtalo de nuevo."
+        : "Could not generate sentence. Please try again.";
+      setSentenceData({ text: "", audioUrl: "", loading: false, error: msg });
     }
   };
 
@@ -623,6 +629,16 @@ function GameBoardMock({ wordBank }) {
   const previousTutorialSlide = () => {
     setTutorialIndex((prev) => (prev > 0 ? prev - 1 : 0));
   };
+
+  if (!wordBank || wordBank.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
+        <div className="bg-gray-900 border border-red-800 rounded-xl p-8 max-w-md w-full text-center">
+          <p className="text-red-400 text-sm leading-relaxed">No hay vocabulario disponible para este loop. Contacta a tu instructor.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-surface">

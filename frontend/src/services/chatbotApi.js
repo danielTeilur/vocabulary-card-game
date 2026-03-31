@@ -34,8 +34,10 @@ export async function getGameVocabulary(token, learningLoopId = null) {
         "Content-Type": "application/json",
       },
     });
+    if (!response.ok) {
+      return response.status === 401 ? { error: "unauthorized" } : null;
+    }
     const data = await safeJson(response);
-    if (!response.ok) return null;
     return data;
   } catch {
     return null;

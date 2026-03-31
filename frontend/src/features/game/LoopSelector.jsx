@@ -26,8 +26,12 @@ export default function LoopSelector({ token, onSelect }) {
 
     getGameVocabulary(token).then((data) => {
       setLoading(false);
+      if (data?.error === "unauthorized") {
+        setError("Tu sesión ha expirado. Vuelve a EnglishCode y accede al juego nuevamente.");
+        return;
+      }
       if (!data || !Array.isArray(data.loops)) {
-        setError("No se pudo cargar tu vocabulario. Verifica tu sesión e intenta de nuevo.");
+        setError("No se pudo cargar tu vocabulario. Verifica tu conexión e intenta de nuevo.");
         return;
       }
       const activeLoops = data.loops.filter((l) => Array.isArray(l.vocabulary) && l.vocabulary.length > 0);
@@ -43,12 +47,18 @@ export default function LoopSelector({ token, onSelect }) {
   }, [token]);
 
   function handleSelect(loop) {
-    const normalized = loop.vocabulary.map((item) => ({
-      ...item,
-      level: item.level ?? 1,
-      definition: item.definition ?? null,
-      definition_translation: item.definition_translation ?? null,
-    }));
+    const normalized = loop.vocabulary
+      .filter((item) => item.word && item.translation)
+      .map((item) => ({
+        ...item,
+        level: item.level ?? 1,
+        definition: item.definition ?? null,
+        definition_translation: item.definition_translation ?? null,
+      }));
+    if (normalized.length === 0) {
+      setError("Este loop no tiene vocabulario válido para jugar. Contacta a tu instructor.");
+      return;
+    }
     onSelect(normalized);
   }
 
