@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import requests
@@ -57,19 +58,25 @@ def elevenlabs_tts_to_file(text, out_path: Path):
     return True, ""
 
 
-def bootstrap_word_audio(words):
-    output = {}
-    word_audio_dir = _media_dir("audio", "words")
+def _generate_word_audio(token, word_audio_dir):
+    """Generate audio for a single word and return (token, path_or_none)."""
+    file_path = word_audio_dir / f"{_slug(token)}.mp3"
+    if not file_path.exists() and ELEVENLABS_API_KEY:
+        elevenlabs_tts_to_file(token, file_path)
+    return token, file_path if file_path.exists() else None
 
-    for word in words:
-        token = str(word).strip()
-        if not token:
-            continue
-        file_path = word_audio_dir / f"{_slug(token)}.mp3"
-        if not file_path.exists() and ELEVENLABS_API_KEY:
-            elevenlabs_tts_to_file(token, file_path)
-        if file_path.exists():
-            output[token] = _public_media_path(file_path)
+
+def bootstrap_word_audio(words, max_workers=8):
+    word_audio_dir = _media_dir("audio", "words")
+    tokens = [str(w).strip() for w in words if str(w).strip()]
+
+    output = {}
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(_generate_word_audio, token, word_audio_dir): token for token in tokens}
+        for future in as_completed(futures):
+            token, file_path = future.result()
+            if file_path:
+                output[token] = _public_media_path(file_path)
 
     return output
 
