@@ -540,13 +540,15 @@ function GameBoardMock({ wordBank }) {
     try {
       const text = await Promise.race([generateSentence(words), timeout]);
       let audioUrl = "";
+      let audioUnavailable = false;
       try {
         audioUrl = (await generateSentenceAudio(text)) || "";
+        if (!audioUrl) audioUnavailable = true;
       } catch {
-        // audio failed but the sentence text is still usable
+        audioUnavailable = true;
       }
       sentenceCacheRef.current[cacheKey] = { text, audioUrl };
-      setSentenceData({ text, audioUrl, loading: false, error: "" });
+      setSentenceData({ text, audioUrl, loading: false, error: "", audioUnavailable });
     } catch (err) {
       const msg = err?.message === "timeout"
         ? "La generación tardó demasiado. Presiona Go Back e inténtalo de nuevo."
@@ -757,6 +759,7 @@ function GameBoardMock({ wordBank }) {
           <div className="enhancement-card sentence-card"><header><h2>Sentence Enhancement</h2><p>Selected words must be from the same row.</p></header>
             {enhanceError && <p className="accuracy-error">{enhanceError}</p>}
             <div className="sentence-box">{sentenceData.loading ? <p>Generating sentence...</p> : sentenceData.error ? <p className="accuracy-error">{sentenceData.error}</p> : <p>{sentenceData.text}</p>}</div>
+            {sentenceData.audioUnavailable && !sentenceData.loading && !sentenceData.error && <p className="accuracy-error" style={{ fontSize: "0.75rem" }}>Audio de referencia no disponible. Puedes leer la oración y grabarte igual.</p>}
             <div className="sentence-actions">
               <button type="button" onClick={() => (sentenceData.audioUrl ? playAudioUrl(sentenceData.audioUrl) : sentenceData.text ? speakFallback(sentenceData.text) : null)} disabled={!sentenceData.text || sentenceData.loading || sentenceOverlayBlocked || sentenceOverlayResolved}>▶</button>
               <button type="button" onClick={() => {
