@@ -194,6 +194,7 @@ function GameBoardMock({ wordBank }) {
   const mediaChunksRef = useRef([]);
   const mediaContextRef = useRef(null);
   const handTrackRef = useRef(null);
+  const sentenceCacheRef = useRef({});
   const [handScrollHint, setHandScrollHint] = useState("none");
 
   const deckTotal = wordBank ? wordBank.length : 0;
@@ -365,7 +366,7 @@ function GameBoardMock({ wordBank }) {
   };
 
   const prepareStage = (nextStage, endlessMode) => {
-    const nextDeck = buildDeck();
+    const nextDeck = buildDeck(wordBank);
     setStageNumber(nextStage);
     setIsEndless(endlessMode);
     setCurrentScore(0);
@@ -519,18 +520,32 @@ function GameBoardMock({ wordBank }) {
   const openSentenceEnhance = async () => {
     if (!canSentenceEnhanceSelection) return;
     const words = selectedBoardCards.map((card) => card.word);
+    const cacheKey = [...words].sort().join("|");
     setEnhanceSelectionIds(selectedBoardIds);
     setEnhanceMenuOpen(false);
     setEnhanceOverlay("sentence");
-    setSentenceData({ text: "", audioUrl: "", loading: true, error: "" });
     setSentenceFeedback("");
     setEnhanceError("");
+
+    const cached = sentenceCacheRef.current[cacheKey];
+    if (cached) {
+      setSentenceData({ text: cached.text, audioUrl: cached.audioUrl, loading: false, error: "" });
+      return;
+    }
+
+    setSentenceData({ text: "", audioUrl: "", loading: true, error: "" });
     try {
       const text = await generateSentence(words);
-      const audioUrl = await generateSentenceAudio(text);
-      setSentenceData({ text, audioUrl: audioUrl || "", loading: false, error: "" });
+      let audioUrl = "";
+      try {
+        audioUrl = (await generateSentenceAudio(text)) || "";
+      } catch {
+        // audio failed but we still have the sentence text
+      }
+      sentenceCacheRef.current[cacheKey] = { text, audioUrl };
+      setSentenceData({ text, audioUrl, loading: false, error: "" });
     } catch {
-      setSentenceData({ text: "", audioUrl: "", loading: false, error: "Could not generate sentence." });
+      setSentenceData({ text: "", audioUrl: "", loading: false, error: "Could not generate sentence. Please try again." });
     }
   };
 
@@ -541,6 +556,7 @@ function GameBoardMock({ wordBank }) {
     setEnhanceOverlay(null);
     setEnhanceMenuOpen(false);
     setEnhanceSelectionIds([]);
+    setSentenceData({ text: "", audioUrl: "", loading: false, error: "" });
     setSentenceFeedback("");
     setEnhanceError("");
   };

@@ -129,9 +129,10 @@ def generate_fallback_sentence(words):
 def generate_sentence_audio(sentence):
     sentence_dir = _media_dir("audio", "sentences")
     file_path = sentence_dir / f"{_slug(sentence)[:80]}.mp3"
-    ok, error = elevenlabs_tts_to_file(sentence, file_path)
-    if not ok:
-        return False, "", error
+    if not file_path.exists():
+        ok, error = elevenlabs_tts_to_file(sentence, file_path)
+        if not ok:
+            return False, "", error
     return True, _public_media_path(file_path), ""
 
 
