@@ -4,7 +4,13 @@ import GameBoardMock from "../features/game/GameBoardMock";
 import { getTokenByEmail } from "../services/chatbotApi";
 
 function getTokenFromUrl() {
-  return new URLSearchParams(window.location.search).get("token") || "";
+  const token = new URLSearchParams(window.location.search).get("token") || "";
+  if (token) {
+    const clean = new URL(window.location.href);
+    clean.searchParams.delete("token");
+    window.history.replaceState({}, "", clean.toString());
+  }
+  return token;
 }
 
 const IS_DEV_MODE = import.meta.env.VITE_DEV_MODE === "true";

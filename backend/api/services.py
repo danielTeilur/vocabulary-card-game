@@ -53,8 +53,11 @@ def elevenlabs_tts_to_file(text, out_path: Path):
     if response.status_code >= 400:
         return False, f"ElevenLabs error {response.status_code}: {response.text[:180]}"
 
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_bytes(response.content)
+    try:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_bytes(response.content)
+    except OSError as e:
+        return False, f"Failed to save audio file: {e}"
     return True, ""
 
 

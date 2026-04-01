@@ -1,5 +1,6 @@
 import json
 
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -13,6 +14,9 @@ from .services import (
     generate_sentence_from_openai,
 )
 
+# Max audio upload: 10 MB
+MAX_AUDIO_BYTES = 10 * 1024 * 1024
+
 
 def _json_body(request):
     try:
@@ -21,9 +25,33 @@ def _json_body(request):
         return {}
 
 
+def _client_ip(request):
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR", "unknown")
+
+
+def _rate_limited(request, endpoint: str, limit: int, window: int) -> bool:
+    """Return True if this IP has exceeded `limit` calls in the last `window` seconds.
+
+    Uses Django's default cache (LocMemCache in dev; configure a shared cache in
+    production if you run multiple workers).
+    """
+    key = f"rl:{endpoint}:{_client_ip(request)}"
+    count = cache.get(key, 0)
+    if count >= limit:
+        return True
+    cache.set(key, count + 1, timeout=window)
+    return False
+
+
 @csrf_exempt
 @require_POST
 def bootstrap_word_audio(request):
+    if _rate_limited(request, "bootstrap", limit=5, window=60):
+        return JsonResponse({"detail": "Too many requests. Try again in a minute."}, status=429)
+
     payload = _json_body(request)
     words = payload.get("words") or []
     if not isinstance(words, list):
@@ -36,6 +64,9 @@ def bootstrap_word_audio(request):
 @csrf_exempt
 @require_POST
 def generate_sentence(request):
+    if _rate_limited(request, "gen-sentence", limit=30, window=60):
+        return JsonResponse({"detail": "Too many requests. Try again in a minute."}, status=429)
+
     payload = _json_body(request)
     words = payload.get("words") or []
     if not isinstance(words, list) or not words:
@@ -54,6 +85,9 @@ def generate_sentence(request):
 @csrf_exempt
 @require_POST
 def generate_sentence_audio(request):
+    if _rate_limited(request, "gen-audio", limit=20, window=60):
+        return JsonResponse({"detail": "Too many requests. Try again in a minute."}, status=429)
+
     payload = _json_body(request)
     sentence = str(payload.get("sentence", "")).strip()
     if not sentence:
@@ -68,6 +102,9 @@ def generate_sentence_audio(request):
 @csrf_exempt
 @require_POST
 def session_analysis(request):
+    if _rate_limited(request, "session-analysis", limit=10, window=60):
+        return JsonResponse({"detail": "Too many requests. Try again in a minute."}, status=429)
+
     payload = _json_body(request)
     word_stats = payload.get("word_stats")
     if not isinstance(word_stats, list):
@@ -82,12 +119,17 @@ def session_analysis(request):
 @csrf_exempt
 @require_POST
 def evaluate_pronunciation(request):
+    if _rate_limited(request, "eval-pronunciation", limit=20, window=60):
+        return JsonResponse({"detail": "Too many requests. Try again in a minute."}, status=429)
+
     audio = request.FILES.get("audio")
     expected_text = str(request.POST.get("expected_text", "")).strip()
     mode = str(request.POST.get("mode", "word")).strip()
 
     if not audio:
         return JsonResponse({"detail": "audio file is required"}, status=400)
+    if audio.size > MAX_AUDIO_BYTES:
+        return JsonResponse({"detail": "Audio file too large (max 10 MB)."}, status=413)
     if not expected_text:
         return JsonResponse({"detail": "expected_text is required"}, status=400)
 
