@@ -5,6 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from .services import (
+    analyze_session as analyze_session_service,
     bootstrap_word_audio as bootstrap_word_audio_service,
     evaluate_pronunciation as speechace_evaluate_pronunciation,
     generate_fallback_sentence,
@@ -62,6 +63,20 @@ def generate_sentence_audio(request):
     if not ok:
         return JsonResponse({"detail": error}, status=502)
     return JsonResponse({"audio_url": audio_url})
+
+
+@csrf_exempt
+@require_POST
+def session_analysis(request):
+    payload = _json_body(request)
+    word_stats = payload.get("word_stats")
+    if not isinstance(word_stats, list):
+        return JsonResponse({"detail": "word_stats must be a list"}, status=400)
+
+    ok, text, error = analyze_session_service(payload)
+    if not ok:
+        return JsonResponse({"detail": error}, status=502)
+    return JsonResponse({"analysis": text})
 
 
 @csrf_exempt

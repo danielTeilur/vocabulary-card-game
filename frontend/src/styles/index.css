@@ -876,7 +876,9 @@ body {
 }
 
 .result-card {
-  width: min(35rem, 100%);
+  width: min(38rem, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
   border-radius: 1rem;
   border: 0.0625rem solid rgba(191, 250, 255, 0.52);
   background: linear-gradient(170deg, rgba(12, 27, 62, 0.95), rgba(9, 19, 41, 0.96));
@@ -895,6 +897,108 @@ body {
   margin: 0.45rem 0 0;
   font-size: 0.9rem;
   color: #e7fdff;
+}
+
+.result-stats {
+  margin-top: 0.85rem;
+  padding: 0.7rem 0.85rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 0.5rem;
+  border: 0.0625rem solid rgba(191, 250, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.result-stats-grid {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.result-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.stat-label {
+  font-size: 0.68rem;
+  color: rgba(180, 251, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-value {
+  font-size: 1rem;
+  color: #b4fbff;
+  font-family: "Orbitron", sans-serif;
+}
+
+.result-words-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.words-row-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-top: 0.15rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.dominated-label { color: #6ee7b7; }
+.difficult-label  { color: #fca5a5; }
+
+.words-chips {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.word-chip {
+  font-size: 0.72rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.dominated-chip {
+  background: rgba(52, 211, 153, 0.18);
+  border: 0.0625rem solid rgba(52, 211, 153, 0.5);
+  color: #6ee7b7;
+}
+
+.difficult-chip {
+  background: rgba(248, 113, 113, 0.15);
+  border: 0.0625rem solid rgba(248, 113, 113, 0.4);
+  color: #fca5a5;
+}
+
+.result-analysis {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 0.5rem;
+  border-left: 0.2rem solid rgba(191, 250, 255, 0.4);
+}
+
+.analysis-loading {
+  font-size: 0.8rem;
+  color: rgba(180, 251, 255, 0.5);
+  font-style: italic;
+  margin: 0;
+}
+
+.analysis-text {
+  font-size: 0.82rem;
+  color: #e7fdff;
+  line-height: 1.5;
+  margin: 0;
 }
 
 .result-actions {

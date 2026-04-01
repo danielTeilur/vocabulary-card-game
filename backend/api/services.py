@@ -143,6 +143,66 @@ def generate_sentence_audio(sentence):
     return True, _public_media_path(file_path), ""
 
 
+def analyze_session(stats: dict) -> tuple:
+    if not OPENAI_API_KEY:
+        return False, "", "OPENAI_API_KEY missing"
+
+    word_stats = stats.get("word_stats", [])
+    dominated = [w["word"] for w in word_stats if w.get("dominated")]
+    difficult = [w["word"] for w in word_stats if not w.get("dominated") and w.get("attempts_count", 0) > 0]
+    levels_cleared = stats.get("levels_cleared", 0)
+    result = stats.get("result", "lose")
+    sentences_succeeded = stats.get("total_sentences_succeeded", 0)
+
+    if not word_stats:
+        return True, "¡Completa pronunciaciones para obtener tu análisis personalizado!", ""
+
+    parts = [
+        "You are an English language coach for Spanish speakers.",
+        f"A student just finished a vocabulary pronunciation game and {'won' if result == 'win' else 'lost'}.",
+        f"Levels cleared: {levels_cleared}.",
+    ]
+    if dominated:
+        parts.append(f"Words pronounced successfully: {', '.join(dominated)}.")
+    if difficult:
+        parts.append(f"Words that need more practice: {', '.join(difficult)}.")
+    if sentences_succeeded:
+        parts.append(f"Successfully activated {sentences_succeeded} sentence enhancement(s).")
+    parts.append(
+        "Write 2-3 sentences of encouraging, personalized feedback in Spanish. "
+        "Mention specific words they mastered and specific words to keep practicing. "
+        "Be brief and motivating. Return only the feedback text, no JSON."
+    )
+
+    headers = {
+        "Authorization": f"Bearer {OPENAI_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": OPENAI_MODEL,
+        "messages": [
+            {"role": "system", "content": "You are a language learning coach. Return only the feedback text in Spanish."},
+            {"role": "user", "content": " ".join(parts)},
+        ],
+        "temperature": 0.7,
+        "max_tokens": 200,
+    }
+    response = requests.post(
+        "https://api.openai.com/v1/chat/completions",
+        headers=headers,
+        json=payload,
+        timeout=30,
+    )
+    if response.status_code >= 400:
+        return False, "", f"OpenAI error {response.status_code}: {response.text[:180]}"
+
+    data = response.json()
+    text = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+    if not text:
+        return False, "", "OpenAI response empty"
+    return True, text, ""
+
+
 def evaluate_pronunciation(audio_file, expected_text):
     if not SPEECHACE_API_KEY:
         return False, None, {"detail": "SPEECHACE_API_KEY missing"}

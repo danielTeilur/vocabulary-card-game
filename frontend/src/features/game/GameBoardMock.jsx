@@ -2,6 +2,7 @@
 import {
   bootstrapWordAudio,
   evaluatePronunciation,
+  fetchSessionAnalysis,
   generateSentence,
   generateSentenceAudio,
   resolveMediaUrl
@@ -97,6 +98,16 @@ const TUTORIAL_SLIDES = [
     text: "Eso es todo por ahora, espero disfrutes de esta experiencia. Recuerda si tienes dudas o un comentario de algo que haría este juego más entretenido por favor haznos saber si con gusto evaluamos tu sugerencia. ¡Feliz día! ¡Y mucho éxito!"
   }
 ];
+const INITIAL_SESSION_STATS = {
+  wordStats: {},
+  sentenceAttempts: [],
+  handScores: [],
+  totalWordsAttempted: 0,
+  totalWordsSucceeded: 0,
+  totalSentencesAttempted: 0,
+  totalSentencesSucceeded: 0,
+};
+
 let deckInstance = 0;
 
 const shuffle = (cards) => {
@@ -188,6 +199,11 @@ function GameBoardMock({ wordBank }) {
   const [tutorialIndex, setTutorialIndex] = useState(0);
   const [tutorialImageErrors, setTutorialImageErrors] = useState({});
 
+  const [sessionStats, setSessionStats] = useState(INITIAL_SESSION_STATS);
+  const [sessionAnalysis, setSessionAnalysis] = useState({ text: "", loading: false });
+  const sessionStatsRef = useRef(INITIAL_SESSION_STATS);
+  const levelsRef = useRef(0);
+
   const holdTimerRef = useRef(null);
   const holdTriggeredRef = useRef(false);
   const mediaRecorderRef = useRef(null);
@@ -196,6 +212,14 @@ function GameBoardMock({ wordBank }) {
   const handTrackRef = useRef(null);
   const sentenceCacheRef = useRef({});
   const [handScrollHint, setHandScrollHint] = useState("none");
+
+  const sessionSummary = useMemo(() => {
+    const entries = Object.entries(sessionStats.wordStats);
+    const dominatedWords = entries.filter(([, d]) => d.dominated).map(([w]) => w);
+    const difficultWords = entries.filter(([, d]) => !d.dominated).map(([w]) => w);
+    const bestHand = sessionStats.handScores.length > 0 ? Math.max(...sessionStats.handScores) : 0;
+    return { dominatedWords, difficultWords, bestHand, totalAttempted: entries.length };
+  }, [sessionStats]);
 
   const deckTotal = wordBank ? wordBank.length : 0;
   const targetScore = requiredScore(stageNumber);
@@ -248,6 +272,32 @@ function GameBoardMock({ wordBank }) {
     [handCards, flatBoardCards, tooltipCardId]
   );
   const interactionLocked = Boolean(resultState || enhanceOverlay);
+
+  useEffect(() => { sessionStatsRef.current = sessionStats; }, [sessionStats]);
+  useEffect(() => { levelsRef.current = levelsCleared; }, [levelsCleared]);
+
+  useEffect(() => {
+    if (!resultState) return;
+    const isTerminal = resultState === "game_over" || resultState === "endless_game_over" || resultState === "campaign_complete";
+    if (!isTerminal) return;
+    const stats = sessionStatsRef.current;
+    if (Object.keys(stats.wordStats).length === 0) return;
+    const levels = levelsRef.current;
+    setSessionAnalysis({ text: "", loading: true });
+    fetchSessionAnalysis({
+      word_stats: Object.entries(stats.wordStats).map(([word, data]) => ({
+        word,
+        dominated: data.dominated,
+        attempts_count: data.attempts.length,
+        best_accuracy: data.bestAccuracy,
+      })),
+      levels_cleared: levels,
+      result: resultState === "campaign_complete" ? "win" : "lose",
+      total_sentences_succeeded: stats.totalSentencesSucceeded,
+    })
+      .then((text) => setSessionAnalysis({ text, loading: false }))
+      .catch(() => setSessionAnalysis({ text: "", loading: false }));
+  }, [resultState]);
 
   useEffect(() => {
     const words = [...new Set((wordBank || []).map((entry) => entry.word))];
@@ -414,6 +464,7 @@ function GameBoardMock({ wordBank }) {
     setSelectedHandIds([]);
     setDeckOverlayOpen(false);
     resetEnhanceUi();
+    setSessionStats((prev) => ({ ...prev, handScores: [...prev.handScores, handScore] }));
 
     if (nextScore >= targetScore) {
       setLevelsCleared((prev) => prev + 1);
@@ -455,6 +506,24 @@ function GameBoardMock({ wordBank }) {
         setEnhanceError("");
 
         if (ctx.type === "word") {
+          const succeeded = accuracy >= ACCURACY_GOAL;
+          const word = ctx.expectedText;
+          setSessionStats((prev) => {
+            const existing = prev.wordStats[word] || { attempts: [], bestAccuracy: 0, dominated: false };
+            return {
+              ...prev,
+              wordStats: {
+                ...prev.wordStats,
+                [word]: {
+                  attempts: [...existing.attempts, accuracy],
+                  bestAccuracy: Math.max(existing.bestAccuracy, accuracy),
+                  dominated: existing.dominated || succeeded,
+                },
+              },
+              totalWordsAttempted: prev.totalWordsAttempted + 1,
+              totalWordsSucceeded: prev.totalWordsSucceeded + (succeeded ? 1 : 0),
+            };
+          });
           updateBoardByIds([ctx.cardId], (card) => {
             const a = { ...card.activation };
             if (a.wordBlocked || a.wordCommitted || a.wordPending) return card;
@@ -470,6 +539,13 @@ function GameBoardMock({ wordBank }) {
           });
         }
         if (ctx.type === "sentence") {
+          const sentenceSucceeded = accuracy >= ACCURACY_GOAL;
+          setSessionStats((prev) => ({
+            ...prev,
+            sentenceAttempts: [...prev.sentenceAttempts, { accuracy, success: sentenceSucceeded }],
+            totalSentencesAttempted: prev.totalSentencesAttempted + 1,
+            totalSentencesSucceeded: prev.totalSentencesSucceeded + (sentenceSucceeded ? 1 : 0),
+          }));
           const willBlockNow =
             accuracy < ACCURACY_GOAL &&
             enhancementCards.some((card) => {
@@ -784,12 +860,70 @@ function GameBoardMock({ wordBank }) {
       )}
 
       {resultState && (
-        <section className={`result-overlay ${resultState}`}><div className="result-card"><h2>{overlayTitle}</h2><p>{overlaySubtitle}</p><div className="result-actions">
-          {resultState === "success" && <button type="button" onClick={() => prepareStage(stageNumber + 1, isEndless)}>Continue to next level!</button>}
-          {resultState === "campaign_complete" && <button type="button" onClick={() => prepareStage(stageNumber + 1, true)}>Challenge the Endless mode</button>}
-          {(resultState === "game_over" || resultState === "endless_game_over") && <button type="button" onClick={() => { setLevelsCleared(0); prepareStage(1, false); }}>Play Again</button>}
-          <button type="button" onClick={() => window.alert("Back to EnglishCode placeholder")}>Back to EnglishCode</button>
-        </div></div></section>
+        <section className={`result-overlay ${resultState}`}>
+          <div className="result-card">
+            <h2>{overlayTitle}</h2>
+            <p>{overlaySubtitle}</p>
+
+            {sessionSummary.totalAttempted > 0 && (
+              <div className="result-stats">
+                <div className="result-stats-grid">
+                  <div className="result-stat-item">
+                    <span className="stat-label">Mejor mano</span>
+                    <strong className="stat-value">{sessionSummary.bestHand} pts</strong>
+                  </div>
+                  <div className="result-stat-item">
+                    <span className="stat-label">Palabras dominadas</span>
+                    <strong className="stat-value">{sessionSummary.dominatedWords.length} / {sessionSummary.totalAttempted}</strong>
+                  </div>
+                  {sessionStats.totalSentencesSucceeded > 0 && (
+                    <div className="result-stat-item">
+                      <span className="stat-label">Frases activadas</span>
+                      <strong className="stat-value">{sessionStats.totalSentencesSucceeded}</strong>
+                    </div>
+                  )}
+                </div>
+                {sessionSummary.dominatedWords.length > 0 && (
+                  <div className="result-words-row">
+                    <span className="words-row-label dominated-label">Dominadas</span>
+                    <div className="words-chips">
+                      {sessionSummary.dominatedWords.map((w) => <span key={w} className="word-chip dominated-chip">{w}</span>)}
+                    </div>
+                  </div>
+                )}
+                {sessionSummary.difficultWords.length > 0 && (
+                  <div className="result-words-row">
+                    <span className="words-row-label difficult-label">Practicar</span>
+                    <div className="words-chips">
+                      {sessionSummary.difficultWords.map((w) => <span key={w} className="word-chip difficult-chip">{w}</span>)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {(resultState === "game_over" || resultState === "endless_game_over" || resultState === "campaign_complete") && sessionSummary.totalAttempted > 0 && (
+              <div className="result-analysis">
+                {sessionAnalysis.loading && <p className="analysis-loading">Analizando tu sesión...</p>}
+                {!sessionAnalysis.loading && sessionAnalysis.text && <p className="analysis-text">{sessionAnalysis.text}</p>}
+              </div>
+            )}
+
+            <div className="result-actions">
+              {resultState === "success" && <button type="button" onClick={() => prepareStage(stageNumber + 1, isEndless)}>Continue to next level!</button>}
+              {resultState === "campaign_complete" && <button type="button" onClick={() => prepareStage(stageNumber + 1, true)}>Challenge the Endless mode</button>}
+              {(resultState === "game_over" || resultState === "endless_game_over") && (
+                <button type="button" onClick={() => {
+                  setLevelsCleared(0);
+                  setSessionStats(INITIAL_SESSION_STATS);
+                  setSessionAnalysis({ text: "", loading: false });
+                  prepareStage(1, false);
+                }}>Play Again</button>
+              )}
+              <button type="button" onClick={() => window.alert("Back to EnglishCode placeholder")}>Back to EnglishCode</button>
+            </div>
+          </div>
+        </section>
       )}
 
       {deckOverlayOpen && !interactionLocked && (

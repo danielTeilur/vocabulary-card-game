@@ -18,6 +18,35 @@ async function safeJson(response) {
  * @param {number|null} learningLoopId - optional, filter to a single loop
  * @returns {{ loops: Array }|null} - null on error
  */
+/**
+ * DEV ONLY — exchanges an email for a JWT access token via the chatbot backend
+ * dev endpoint. Requires VITE_DEV_API_KEY to be set.
+ *
+ * @param {string} email
+ * @returns {string|null} access token or null on failure
+ */
+export async function getTokenByEmail(email) {
+  if (!CHATBOT_BASE) return null;
+  const apiKey = import.meta.env.VITE_DEV_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const response = await fetch(`${CHATBOT_BASE}/api/dev/get-token/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-KEY": apiKey,
+      },
+      body: JSON.stringify({ email }),
+    });
+    if (!response.ok) return null;
+    const data = await safeJson(response);
+    return data.access || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getGameVocabulary(token, learningLoopId = null) {
   if (!CHATBOT_BASE) return null;
   if (!token) return null;

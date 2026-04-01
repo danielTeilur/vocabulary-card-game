@@ -99,6 +99,22 @@ export async function evaluatePronunciation(audioBlob, expectedText, mode) {
   }
 }
 
+export async function fetchSessionAnalysis(statsPayload) {
+  if (!API_ENABLED) return "";
+  try {
+    const response = await fetch(`${API_BASE}/api/activation/session-analysis/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(statsPayload)
+    });
+    const data = await safeJson(response);
+    if (!response.ok) return "";
+    return data.analysis || "";
+  } catch {
+    return "";
+  }
+}
+
 export function resolveMediaUrl(pathOrUrl) {
   if (!pathOrUrl) return "";
   if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) return pathOrUrl;

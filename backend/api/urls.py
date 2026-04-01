@@ -7,4 +7,5 @@ urlpatterns = [
     path("activation/generate-sentence/", views.generate_sentence, name="generate-sentence"),
     path("activation/generate-sentence-audio/", views.generate_sentence_audio, name="generate-sentence-audio"),
     path("activation/evaluate-pronunciation/", views.evaluate_pronunciation, name="evaluate-pronunciation"),
+    path("activation/session-analysis/", views.session_analysis, name="session-analysis"),
 ]
