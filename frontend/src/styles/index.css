@@ -418,6 +418,115 @@ body {
   text-shadow: 0 0 0.625rem rgba(0, 248, 255, 0.24);
 }
 
+/* ── Hands pips ── */
+.hands-pips {
+  display: flex;
+  gap: 0.28rem;
+  align-items: center;
+}
+
+.hand-pip {
+  width: 0.62rem;
+  height: 0.62rem;
+  border-radius: 50%;
+  border: 0.0938rem solid rgba(100, 252, 255, 0.75);
+  background: rgba(100, 252, 255, 0.7);
+  box-shadow: 0 0 0.38rem rgba(100, 252, 255, 0.55);
+  transition: background 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+  flex-shrink: 0;
+}
+
+.hand-pip.spent {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: none;
+}
+
+/* ── Tension: danger (2 hands left) ── */
+.left-rail.tension-danger .match-panel,
+.left-rail.tension-danger .left-score-panel {
+  background: linear-gradient(160deg, rgba(78, 42, 8, 0.88), rgba(46, 23, 3, 0.93));
+  border-color: rgba(255, 168, 50, 0.52);
+  transition: background 0.5s ease, border-color 0.5s ease;
+}
+
+.left-rail.tension-danger .match-panel h2,
+.left-rail.tension-danger .match-panel dt {
+  color: rgba(255, 196, 80, 0.92);
+}
+
+.left-rail.tension-danger .hand-pip:not(.spent) {
+  border-color: rgba(255, 185, 55, 0.85);
+  background: rgba(255, 185, 55, 0.75);
+  box-shadow: 0 0 0.38rem rgba(255, 185, 55, 0.6);
+}
+
+/* ── Tension: critical (1 hand left) ── */
+.left-rail.tension-critical .match-panel,
+.left-rail.tension-critical .left-score-panel {
+  background: linear-gradient(160deg, rgba(92, 12, 12, 0.92), rgba(52, 5, 5, 0.96));
+  border-color: rgba(255, 78, 78, 0.62);
+  transition: background 0.5s ease, border-color 0.5s ease;
+}
+
+.left-rail.tension-critical .match-panel h2,
+.left-rail.tension-critical .match-panel dt {
+  color: rgba(255, 130, 130, 0.95);
+}
+
+.left-rail.tension-critical .hand-pip:not(.spent) {
+  border-color: rgba(255, 80, 80, 0.95);
+  background: rgba(255, 75, 75, 0.82);
+  box-shadow: 0 0 0.45rem rgba(255, 75, 75, 0.75);
+  animation: pip-pulse 0.85s ease-in-out infinite;
+}
+
+@keyframes pip-pulse {
+  0%, 100% { box-shadow: 0 0 0.4rem rgba(255, 75, 75, 0.75); }
+  50%       { box-shadow: 0 0 0.85rem rgba(255, 75, 75, 1); }
+}
+
+/* ── Table-frame tension border glow ── */
+.table-frame.tension-danger {
+  animation: frame-pulse-amber 1.8s ease-in-out infinite;
+}
+
+.table-frame.tension-critical {
+  animation: frame-pulse-red 1s ease-in-out infinite;
+}
+
+@keyframes frame-pulse-amber {
+  0%, 100% {
+    box-shadow:
+      0 1.25rem 3.4375rem rgba(0, 0, 0, 0.55),
+      inset 0 0 0 0.125rem rgba(255, 165, 50, 0.45),
+      inset 0 0 2rem rgba(190, 95, 15, 0.28);
+  }
+  50% {
+    box-shadow:
+      0 1.25rem 3.4375rem rgba(0, 0, 0, 0.55),
+      inset 0 0 0 0.125rem rgba(255, 185, 65, 0.78),
+      inset 0 0 2.75rem rgba(190, 95, 15, 0.45),
+      0 0 1.75rem rgba(255, 165, 50, 0.22);
+  }
+}
+
+@keyframes frame-pulse-red {
+  0%, 100% {
+    box-shadow:
+      0 1.25rem 3.4375rem rgba(0, 0, 0, 0.55),
+      inset 0 0 0 0.125rem rgba(255, 65, 65, 0.55),
+      inset 0 0 2rem rgba(200, 25, 25, 0.32);
+  }
+  50% {
+    box-shadow:
+      0 1.25rem 3.4375rem rgba(0, 0, 0, 0.55),
+      inset 0 0 0 0.1875rem rgba(255, 75, 75, 0.92),
+      inset 0 0 3.25rem rgba(200, 25, 25, 0.55),
+      0 0 2.25rem rgba(255, 60, 60, 0.32);
+  }
+}
+
 .hand-zone {
   position: relative;
   z-index: 120;

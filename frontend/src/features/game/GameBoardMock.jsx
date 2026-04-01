@@ -228,6 +228,7 @@ function GameBoardMock({ wordBank }) {
 
   const deckTotal = wordBank ? wordBank.length : 0;
   const targetScore = requiredScore(stageNumber);
+  const tensionClass = handsLeft <= 1 ? "tension-critical" : handsLeft === 2 ? "tension-danger" : "";
   const flatBoardCards = useMemo(() => boardCards(boardRows), [boardRows]);
   const selectedBoardCards = useMemo(() => flatBoardCards.filter((card) => selectedBoardIds.includes(card.id)), [flatBoardCards, selectedBoardIds]);
   const selectedRows = [...new Set(selectedBoardCards.map((card) => card.level))];
@@ -749,15 +750,31 @@ function GameBoardMock({ wordBank }) {
 
       <section className="game-root px-3 py-3 sm:px-6 sm:py-5">
         <div className="mx-auto w-full max-w-[1280px] animate-rise game-layout">
-          <div className="table-frame">
-            <aside className="left-rail">
+          <div className={`table-frame${tensionClass ? ` ${tensionClass}` : ""}`}>
+            <aside className={`left-rail${tensionClass ? ` ${tensionClass}` : ""}`}>
               <div className="deck-score-row">
                 <button type="button" className={`deck-stack face-down ${deckCards.length === 0 ? "is-empty" : ""}`} onClick={() => setDeckOverlayOpen(true)} disabled={interactionLocked}>
                   <div style={{ opacity: deckIntensity > 0.75 ? 0.7 : 0.18 }} /><div style={{ opacity: deckIntensity > 0.5 ? 0.8 : 0.2 }} /><div style={{ opacity: deckIntensity > 0.25 ? 0.9 : 0.3 }} /><div style={{ opacity: deckIntensity > 0 ? 1 : 0.35 }} /><em className="deck-count">{deckCards.length}</em><span>Deck</span>
                 </button>
                 <div className="left-score-panel"><h3>Score</h3><p>{displayScore}</p></div>
               </div>
-              <section className="match-panel"><h2>Match</h2><dl><div><dt>Hands Left</dt><dd>{handsLeft} / {MAX_HANDS}</dd></div><div><dt>Target Score</dt><dd>{targetScore}</dd></div><div><dt>Stage</dt><dd>{stageNumber}</dd></div></dl></section>
+              <section className="match-panel">
+                <h2>Match</h2>
+                <dl>
+                  <div>
+                    <dt>Hands Left</dt>
+                    <dd>
+                      <div className="hands-pips">
+                        {Array.from({ length: MAX_HANDS }, (_, i) => (
+                          <span key={i} className={`hand-pip${i < handsLeft ? "" : " spent"}`} />
+                        ))}
+                      </div>
+                    </dd>
+                  </div>
+                  <div><dt>Target Score</dt><dd>{targetScore}</dd></div>
+                  <div><dt>Stage</dt><dd>{stageNumber}</dd></div>
+                </dl>
+              </section>
             </aside>
 
             <section className="board-core" aria-label="Main board">
