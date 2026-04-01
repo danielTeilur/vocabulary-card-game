@@ -769,11 +769,10 @@ function GameBoardMock({ wordBank }) {
                       {boardRows[level].map((card) => (
                         <motion.article
                           key={card.id}
-                          layout
-                          initial={{ opacity: 0, scale: 0.7, y: 12 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.75, y: -14 }}
-                          transition={{ duration: 0.2, ease: "easeOut" }}
+                          initial={{ opacity: 0, scale: 0.75 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.7 }}
+                          transition={{ duration: 0.15, ease: "easeOut" }}
                           className={`board-card clickable ${boardClass(card)} ${selectedBoardIds.includes(card.id) ? "selected" : ""}`}
                           onPointerDown={(e) => holdStart(card.id, e.currentTarget)}
                           onPointerUp={() => holdEndBoard(card.id)}
@@ -781,7 +780,8 @@ function GameBoardMock({ wordBank }) {
                           onPointerLeave={clearHold}
                           onContextMenu={(e) => e.preventDefault()}
                         >
-                          <strong>{card.level}</strong><h4>{card.word}</h4><small className="card-points">{formatCardPoints(cardScoreFromActivation(card))} pts</small>
+                          <small className="card-points">{formatCardPoints(cardScoreFromActivation(card))} pts</small>
+                          <h4>{card.word}</h4>
                         </motion.article>
                       ))}
                     </AnimatePresence>
