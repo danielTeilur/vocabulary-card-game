@@ -209,6 +209,15 @@ function GameBoardMock({ wordBank }) {
   const scoreAnimRef = useRef(null);
   const prevScoreRef = useRef(0);
 
+  const [newCardIds, setNewCardIds] = useState([]);
+  const [deckShaking, setDeckShaking] = useState(false);
+  const newCardTimerRef = useRef(null);
+
+  const [showComboBanner, setShowComboBanner] = useState(false);
+  const [comboScoreFlash, setComboScoreFlash] = useState(false);
+  const comboBannerTimerRef = useRef(null);
+  const comboScoreTimerRef = useRef(null);
+
   const holdTimerRef = useRef(null);
   const holdTriggeredRef = useRef(false);
   const mediaRecorderRef = useRef(null);
@@ -473,6 +482,7 @@ function GameBoardMock({ wordBank }) {
     if (interactionLocked) return;
     const cards = boardCards(boardRows);
     if (cards.length === 0) return;
+    const hasComboCards = cards.some((c) => c.activation?.wordCommitted && c.activation?.sentenceCommitted);
     const handScore = Math.round(cards.reduce((total, card) => total + cardScoreFromActivation(card), 0));
     const nextScore = currentScore + handScore;
     const nextHands = Math.max(handsLeft - 1, 0);
@@ -489,6 +499,19 @@ function GameBoardMock({ wordBank }) {
     setDeckOverlayOpen(false);
     resetEnhanceUi();
     setSessionStats((prev) => ({ ...prev, handScores: [...prev.handScores, handScore] }));
+
+    if (drawn.length > 0) {
+      setNewCardIds(drawn.map((c) => c.id));
+      setDeckShaking(true);
+      if (newCardTimerRef.current) clearTimeout(newCardTimerRef.current);
+      newCardTimerRef.current = setTimeout(() => setNewCardIds([]), 950);
+    }
+
+    if (hasComboCards) {
+      setComboScoreFlash(true);
+      if (comboScoreTimerRef.current) clearTimeout(comboScoreTimerRef.current);
+      comboScoreTimerRef.current = setTimeout(() => setComboScoreFlash(false), 1100);
+    }
 
     if (nextScore >= targetScore) {
       setLevelsCleared((prev) => prev + 1);
@@ -659,8 +682,20 @@ function GameBoardMock({ wordBank }) {
 
   const closeEnhanceOverlay = (finish) => {
     stopRecording();
-    if (finish) commitPending();
-    else clearPending();
+    if (finish) {
+      const willHaveDouble = enhancementCards.some((card) => {
+        const a = card.activation;
+        return (a.wordCommitted || a.wordPending) && (a.sentenceCommitted || a.sentencePending);
+      });
+      commitPending();
+      if (willHaveDouble) {
+        setShowComboBanner(true);
+        if (comboBannerTimerRef.current) clearTimeout(comboBannerTimerRef.current);
+        comboBannerTimerRef.current = setTimeout(() => setShowComboBanner(false), 2500);
+      }
+    } else {
+      clearPending();
+    }
     setEnhanceOverlay(null);
     setEnhanceMenuOpen(false);
     setEnhanceSelectionIds([]);
@@ -753,10 +788,10 @@ function GameBoardMock({ wordBank }) {
           <div className={`table-frame${tensionClass ? ` ${tensionClass}` : ""}`}>
             <aside className={`left-rail${tensionClass ? ` ${tensionClass}` : ""}`}>
               <div className="deck-score-row">
-                <button type="button" className={`deck-stack face-down ${deckCards.length === 0 ? "is-empty" : ""}`} onClick={() => setDeckOverlayOpen(true)} disabled={interactionLocked}>
+                <button type="button" className={`deck-stack face-down ${deckCards.length === 0 ? "is-empty" : ""}${deckShaking ? " is-shaking" : ""}`} onClick={() => setDeckOverlayOpen(true)} disabled={interactionLocked} onAnimationEnd={(e) => { if (e.animationName === "deck-shake") setDeckShaking(false); }}>
                   <div style={{ opacity: deckIntensity > 0.75 ? 0.7 : 0.18 }} /><div style={{ opacity: deckIntensity > 0.5 ? 0.8 : 0.2 }} /><div style={{ opacity: deckIntensity > 0.25 ? 0.9 : 0.3 }} /><div style={{ opacity: deckIntensity > 0 ? 1 : 0.35 }} /><em className="deck-count">{deckCards.length}</em><span>Deck</span>
                 </button>
-                <div className="left-score-panel"><h3>Score</h3><p>{displayScore}</p></div>
+                <div className="left-score-panel"><h3>Score</h3><p className={comboScoreFlash ? "combo-score-flash" : ""}>{displayScore}</p></div>
               </div>
               <section className="match-panel">
                 <h2>Match</h2>
@@ -780,7 +815,12 @@ function GameBoardMock({ wordBank }) {
             <section className="board-core" aria-label="Main board">
               {[3, 2, 1].map((level) => (
                 <div key={level} className={`board-row level-${level}`}>
-                  <span>LEVEL {level}</span>
+                  <span>
+                    LEVEL {level}
+                    {boardRows[level].some((c) => c.activation?.wordCommitted && c.activation?.sentenceCommitted) && (
+                      <span className="row-combo-badge">2x</span>
+                    )}
+                  </span>
                   <div className="row-cards">
                     <AnimatePresence mode="popLayout">
                       {boardRows[level].map((card) => (
@@ -826,11 +866,44 @@ function GameBoardMock({ wordBank }) {
 
           <section className="hand-zone" aria-label="Cards in hand">
             <div ref={handTrackRef} className="hand-track" onScroll={updateHandScrollHint}>
-              {handCards.map((card) => (
-                <article key={card.id} className={`hand-card ${selectedHandIds.includes(card.id) ? "selected" : ""}`} onPointerDown={(e) => holdStart(card.id, e.currentTarget)} onPointerUp={() => holdEndHand(card.id)} onPointerCancel={clearHold} onPointerLeave={clearHold} onContextMenu={(e) => e.preventDefault()}>
-                  <span className="card-level">{card.level}</span><h3>{card.word}</h3><p className="card-points">{formatCardPoints(cardScoreFromActivation(card))} pts</p>
-                </article>
-              ))}
+              <AnimatePresence initial={false}>
+                {handCards.map((card) => {
+                  const drawIndex = newCardIds.indexOf(card.id);
+                  const isNew = drawIndex !== -1;
+                  const isSelected = selectedHandIds.includes(card.id);
+                  return (
+                    <motion.article
+                      key={card.id}
+                      layout={false}
+                      className={`hand-card${isSelected ? " selected" : ""}${isNew ? " newly-drawn" : ""}`}
+                      initial={isNew ? { opacity: 0, scale: 0.72 } : false}
+                      animate={{ opacity: 1, scale: 1, y: isSelected ? -14 : 0 }}
+                      exit={{ opacity: 0, scale: 0.82 }}
+                      transition={isNew
+                        ? {
+                            opacity: { duration: 0.3, ease: "easeOut", delay: drawIndex * 0.075 },
+                            scale: { duration: 0.3, ease: "easeOut", delay: drawIndex * 0.075 },
+                            y: { duration: 0.18, ease: "easeOut" }
+                          }
+                        : {
+                            y: { duration: 0.18, ease: "easeOut" },
+                            opacity: { duration: 0.15 },
+                            scale: { duration: 0.15 }
+                          }
+                      }
+                      onPointerDown={(e) => holdStart(card.id, e.currentTarget)}
+                      onPointerUp={() => holdEndHand(card.id)}
+                      onPointerCancel={clearHold}
+                      onPointerLeave={clearHold}
+                      onContextMenu={(e) => e.preventDefault()}
+                    >
+                      <span className="card-level">{card.level}</span>
+                      <h3>{card.word}</h3>
+                      <p className="card-points">{formatCardPoints(cardScoreFromActivation(card))} pts</p>
+                    </motion.article>
+                  );
+                })}
+              </AnimatePresence>
             </div>
             {handScrollHint !== "none" && (
               <div className={`hand-scroll-hint ${handScrollHint === "right" ? "show-right" : "show-left"}`} aria-hidden>
@@ -1038,6 +1111,22 @@ function GameBoardMock({ wordBank }) {
           </div>
         </section>
       )}
+      <AnimatePresence>
+        {showComboBanner && (
+          <motion.div
+            className="combo-banner"
+            initial={{ opacity: 0, y: -55, scale: 0.82 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.88, y: 18 }}
+            transition={{ type: "spring", stiffness: 380, damping: 26 }}
+          >
+            <div className="combo-banner-inner">
+              DOUBLE ACTIVATION
+              <small>x2 multiplier active</small>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
