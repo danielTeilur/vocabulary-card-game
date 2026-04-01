@@ -1,4 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   bootstrapWordAudio,
   evaluatePronunciation,
@@ -204,6 +205,10 @@ function GameBoardMock({ wordBank }) {
   const sessionStatsRef = useRef(INITIAL_SESSION_STATS);
   const levelsRef = useRef(0);
 
+  const [displayScore, setDisplayScore] = useState(0);
+  const scoreAnimRef = useRef(null);
+  const prevScoreRef = useRef(0);
+
   const holdTimerRef = useRef(null);
   const holdTriggeredRef = useRef(false);
   const mediaRecorderRef = useRef(null);
@@ -275,6 +280,24 @@ function GameBoardMock({ wordBank }) {
 
   useEffect(() => { sessionStatsRef.current = sessionStats; }, [sessionStats]);
   useEffect(() => { levelsRef.current = levelsCleared; }, [levelsCleared]);
+
+  useEffect(() => {
+    const start = prevScoreRef.current;
+    const end = currentScore;
+    prevScoreRef.current = end;
+    if (start === end) return;
+    if (scoreAnimRef.current) cancelAnimationFrame(scoreAnimRef.current);
+    const duration = 520;
+    const startTime = performance.now();
+    const tick = (now) => {
+      const progress = Math.min((now - startTime) / duration, 1);
+      const eased = 1 - (1 - progress) ** 3;
+      setDisplayScore(Math.round(start + (end - start) * eased));
+      if (progress < 1) scoreAnimRef.current = requestAnimationFrame(tick);
+    };
+    scoreAnimRef.current = requestAnimationFrame(tick);
+    return () => { if (scoreAnimRef.current) cancelAnimationFrame(scoreAnimRef.current); };
+  }, [currentScore]);
 
   useEffect(() => {
     if (!resultState) return;
@@ -732,7 +755,7 @@ function GameBoardMock({ wordBank }) {
                 <button type="button" className={`deck-stack face-down ${deckCards.length === 0 ? "is-empty" : ""}`} onClick={() => setDeckOverlayOpen(true)} disabled={interactionLocked}>
                   <div style={{ opacity: deckIntensity > 0.75 ? 0.7 : 0.18 }} /><div style={{ opacity: deckIntensity > 0.5 ? 0.8 : 0.2 }} /><div style={{ opacity: deckIntensity > 0.25 ? 0.9 : 0.3 }} /><div style={{ opacity: deckIntensity > 0 ? 1 : 0.35 }} /><em className="deck-count">{deckCards.length}</em><span>Deck</span>
                 </button>
-                <div className="left-score-panel"><h3>Score</h3><p>{currentScore}</p></div>
+                <div className="left-score-panel"><h3>Score</h3><p>{displayScore}</p></div>
               </div>
               <section className="match-panel"><h2>Match</h2><dl><div><dt>Hands Left</dt><dd>{handsLeft} / {MAX_HANDS}</dd></div><div><dt>Target Score</dt><dd>{targetScore}</dd></div><div><dt>Stage</dt><dd>{stageNumber}</dd></div></dl></section>
             </aside>
@@ -742,19 +765,26 @@ function GameBoardMock({ wordBank }) {
                 <div key={level} className={`board-row level-${level}`}>
                   <span>LEVEL {level}</span>
                   <div className="row-cards">
-                    {boardRows[level].map((card) => (
-                      <article
-                        key={card.id}
-                        className={`board-card clickable ${boardClass(card)} ${selectedBoardIds.includes(card.id) ? "selected" : ""}`}
-                        onPointerDown={(e) => holdStart(card.id, e.currentTarget)}
-                        onPointerUp={() => holdEndBoard(card.id)}
-                        onPointerCancel={clearHold}
-                        onPointerLeave={clearHold}
-                        onContextMenu={(e) => e.preventDefault()}
-                      >
-                        <strong>{card.level}</strong><h4>{card.word}</h4><small className="card-points">{formatCardPoints(cardScoreFromActivation(card))} pts</small>
-                      </article>
-                    ))}
+                    <AnimatePresence mode="popLayout">
+                      {boardRows[level].map((card) => (
+                        <motion.article
+                          key={card.id}
+                          layout
+                          initial={{ opacity: 0, scale: 0.7, y: 12 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.75, y: -14 }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
+                          className={`board-card clickable ${boardClass(card)} ${selectedBoardIds.includes(card.id) ? "selected" : ""}`}
+                          onPointerDown={(e) => holdStart(card.id, e.currentTarget)}
+                          onPointerUp={() => holdEndBoard(card.id)}
+                          onPointerCancel={clearHold}
+                          onPointerLeave={clearHold}
+                          onContextMenu={(e) => e.preventDefault()}
+                        >
+                          <strong>{card.level}</strong><h4>{card.word}</h4><small className="card-points">{formatCardPoints(cardScoreFromActivation(card))} pts</small>
+                        </motion.article>
+                      ))}
+                    </AnimatePresence>
                   </div>
                 </div>
               ))}
@@ -806,8 +836,22 @@ function GameBoardMock({ wordBank }) {
                 const locked = ready || blocked;
                 const recording = recordingState.type === "word" && recordingState.cardId === card.id;
                 const audioPath = wordAudioMap[card.word];
+                const animKey = `${card.id}-${a.wordAttempts}-${ready ? "r" : ""}-${blocked ? "b" : ""}`;
+                const wordAnimate = blocked
+                  ? { x: [0, -9, 9, -6, 6, 0], opacity: 0.52 }
+                  : ready
+                    ? { scale: [1, 1.07, 1], opacity: 1 }
+                    : a.wordAttempts > 0
+                      ? { x: [0, -9, 9, -6, 6, 0], opacity: 1 }
+                      : { x: 0, opacity: 1, scale: 1 };
                 return (
-                  <article key={card.id} className={`word-cell ${ready ? "ready" : ""} ${blocked ? "blocked" : ""}`}>
+                  <motion.article
+                    key={animKey}
+                    initial={{ x: 0, opacity: 1, scale: 1 }}
+                    animate={wordAnimate}
+                    transition={{ duration: 0.45, ease: "easeInOut" }}
+                    className={`word-cell ${ready ? "ready" : ""} ${blocked ? "blocked" : ""}`}
+                  >
                     <h3>{card.word}</h3>
                     <div className="word-cell-actions">
                       <button type="button" onClick={() => (audioPath ? playAudioUrl(audioPath) : speakFallback(card.word))} disabled={locked}>▶</button>
@@ -821,7 +865,7 @@ function GameBoardMock({ wordBank }) {
                     {!ready && !blocked && a.lastWordAccuracy !== null && a.lastWordAccuracy < ACCURACY_GOAL && <p className="accuracy-error">You reached {a.lastWordAccuracy}% accuracy! Try again! You need at least {ACCURACY_GOAL}%.</p>}
                     {blocked && <p className="accuracy-blocked">Blocked after 2 failed attempts.</p>}
                     {ready && <p className="accuracy-ready">Ready to enhance.</p>}
-                  </article>
+                  </motion.article>
                 );
               })}
             </div>
