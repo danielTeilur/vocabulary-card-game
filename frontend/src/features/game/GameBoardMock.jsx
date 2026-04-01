@@ -109,8 +109,6 @@ const INITIAL_SESSION_STATS = {
   totalSentencesSucceeded: 0,
 };
 
-let deckInstance = 0;
-
 const shuffle = (cards) => {
   const copy = [...cards];
   for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -121,11 +119,11 @@ const shuffle = (cards) => {
 };
 
 const buildDeck = (wordBank) => {
-  deckInstance += 1;
+  const prefix = Date.now();
   return shuffle(
     wordBank.map((entry, idx) => ({
       ...entry,
-      id: `${deckInstance}-${entry.word}-${idx}`
+      id: `${prefix}-${entry.word}-${idx}`
     }))
   );
 };
@@ -290,6 +288,16 @@ function GameBoardMock({ wordBank }) {
 
   useEffect(() => { sessionStatsRef.current = sessionStats; }, [sessionStats]);
   useEffect(() => { levelsRef.current = levelsCleared; }, [levelsCleared]);
+
+  useEffect(() => {
+    return () => {
+      if (comboBannerTimerRef.current) clearTimeout(comboBannerTimerRef.current);
+      if (comboScoreTimerRef.current) clearTimeout(comboScoreTimerRef.current);
+      if (newCardTimerRef.current) clearTimeout(newCardTimerRef.current);
+      if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+      if (scoreAnimRef.current) cancelAnimationFrame(scoreAnimRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const start = prevScoreRef.current;
@@ -628,7 +636,7 @@ function GameBoardMock({ wordBank }) {
       recorder.start();
       setRecordingState({ type: context.type, cardId: context.cardId || null });
     } catch {
-      // no-op
+      setEnhanceError("No se pudo acceder al micrófono. Verifica los permisos e intenta de nuevo.");
     }
   };
 
@@ -1054,7 +1062,7 @@ function GameBoardMock({ wordBank }) {
                   prepareStage(1, false);
                 }}>Play Again</button>
               )}
-              <button type="button" onClick={() => window.alert("Back to EnglishCode placeholder")}>Back to EnglishCode</button>
+              <button type="button" onClick={() => window.history.back()}>Back to EnglishCode</button>
             </div>
           </div>
         </section>
